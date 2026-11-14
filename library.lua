@@ -1,7 +1,7 @@
 --[[
     VisionUI (Refactored)
     A lightweight Roblox UI library
-    Version: 2.0.2
+    Version: 2.0.3 (Fixed CoreGui bug)
 ]]
 
 local Services = {
@@ -17,6 +17,7 @@ local Services = {
 }
 
 local LocalPlayer = Services.Players.LocalPlayer
+local PlayerGui   = LocalPlayer:WaitForChild("PlayerGui") -- FIX: Use PlayerGui instead of CoreGui
 local Mouse       = LocalPlayer:GetMouse()
 
 -- ==========================================================
@@ -177,7 +178,7 @@ end
 -- ==========================================================
 
 local Library = {
-    version = "2.0.2",
+    version = "2.0.3",
     fps     = 0,
     rank    = "private",
     keybind = Enum.KeyCode.RightShift,
@@ -263,8 +264,7 @@ Library.Date = DateUtil
 local NotificationSystem = {}
 
 function NotificationSystem:Create()
-    -- Remove any existing notification GUI
-    for _, child in ipairs(Services.CoreGui:GetChildren()) do
+    for _, child in ipairs(PlayerGui:GetChildren()) do
         if child.Name == "Notifications" then
             child:Destroy()
         end
@@ -272,8 +272,9 @@ function NotificationSystem:Create()
 
     local gui = Instance.new("ScreenGui")
     gui.Name = "Notifications"
-    gui.Parent = Services.CoreGui
+    gui.Parent = PlayerGui
     gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+    gui.ResetOnSpawn = false
 
     local layout = Instance.new("UIListLayout")
     layout.Parent = gui
@@ -293,7 +294,6 @@ function NotificationSystem:Create()
         notifyType  = notifyType or "notification"
         callback    = callback or function() end
 
-        -- Edge frame (outer border)
         local edge = Instance.new("Frame")
         edge.Name = "edge"
         edge.Parent = gui
@@ -302,7 +302,6 @@ function NotificationSystem:Create()
         edge.Size = UDim2.new(0, 0, 0, 26)
         Helper:CreateCorner(edge, 2)
 
-        -- Background frame (inner panel)
         local bg = Instance.new("Frame")
         bg.Name = "background"
         bg.Parent = edge
@@ -314,7 +313,6 @@ function NotificationSystem:Create()
         Helper:CreateCorner(bg, 2)
         Helper:CreateGradient(bg)
 
-        -- Progress bar
         local barFolder = Instance.new("Folder")
         barFolder.Name = "barFolder"
         barFolder.Parent = bg
@@ -332,7 +330,6 @@ function NotificationSystem:Create()
         barLayout.Parent = barFolder
         barLayout.SortOrder = Enum.SortOrder.LayoutOrder
 
-        -- Text label
         local textLabel = Instance.new("TextLabel")
         textLabel.Name = "notifText"
         textLabel.Parent = bg
@@ -353,7 +350,6 @@ function NotificationSystem:Create()
         bgLayout.SortOrder = Enum.SortOrder.LayoutOrder
         bgLayout.VerticalAlignment = Enum.VerticalAlignment.Center
 
-        -- Measure text width
         local measured = Helper:MeasureText(text, DEFAULTS.Font, DEFAULTS.TextSize)
         local isRunning = false
 
@@ -414,8 +410,7 @@ end
 -- ==========================================================
 
 function Library:CreateWindow(titleText, toggleKey)
-    -- Clean up old GUI
-    for _, child in ipairs(Services.CoreGui:GetChildren()) do
+    for _, child in ipairs(PlayerGui:GetChildren()) do
         if child.Name == "screen" then
             child:Destroy()
         end
@@ -423,10 +418,10 @@ function Library:CreateWindow(titleText, toggleKey)
 
     local screen = Instance.new("ScreenGui")
     screen.Name = "screen"
-    screen.Parent = Services.CoreGui
+    screen.Parent = PlayerGui
     screen.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+    screen.ResetOnSpawn = false
 
-    -- === Outer Edge ===
     local edge = Instance.new("Frame")
     edge.Name = "edge"
     edge.Parent = screen
@@ -444,7 +439,6 @@ function Library:CreateWindow(titleText, toggleKey)
         end
     end)
 
-    -- === Background ===
     local bg = Instance.new("Frame")
     bg.Name = "background"
     bg.Parent = edge
@@ -455,7 +449,6 @@ function Library:CreateWindow(titleText, toggleKey)
     Helper:CreateCorner(bg, 2)
     Helper:CreateGradient(bg)
 
-    -- === Header ===
     local header = Instance.new("TextLabel")
     header.Name = "headerLabel"
     header.Parent = bg
@@ -469,7 +462,6 @@ function Library:CreateWindow(titleText, toggleKey)
     header.RichText = true
     Helper:Pad(header, 12, 6, 6, 6)
 
-    -- === Divider Bar ===
     local barFolder = Instance.new("Folder")
     barFolder.Name = "barFolder"
     barFolder.Parent = bg
@@ -489,7 +481,6 @@ function Library:CreateWindow(titleText, toggleKey)
     barLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
     barLayout.SortOrder = Enum.SortOrder.LayoutOrder
 
-    -- === Close Button ===
     local closeBtn = Instance.new("TextButton")
     closeBtn.Name = "CloseButton"
     closeBtn.Parent = bg
@@ -518,7 +509,6 @@ function Library:CreateWindow(titleText, toggleKey)
         Library:Notify("Press " .. visibilityToggle.Name .. " to bring back the UI", 3, "information")
     end)
 
-    -- === Tab Button Panel (Left) ===
     local tabPanelEdge = Instance.new("Frame")
     tabPanelEdge.Name = "tabButtonsEdge"
     tabPanelEdge.Parent = bg
@@ -546,7 +536,6 @@ function Library:CreateWindow(titleText, toggleKey)
 
     Helper:Pad(tabPanel, 4, 4, 4, 4)
 
-    -- === Content Container (Right) ===
     local contentEdge = Instance.new("Frame")
     contentEdge.Name = "containerEdge"
     contentEdge.Parent = bg
@@ -565,16 +554,11 @@ function Library:CreateWindow(titleText, toggleKey)
     Helper:CreateCorner(content, 2)
     Helper:CreateGradient(content)
 
-    -- ==========================================================
-    -- TAB MANAGER
-    -- ==========================================================
-
     local Tabs = { isFirst = true, current = "" }
 
     function Tabs:CreateTab(tabTitle)
         tabTitle = tabTitle or "tab"
 
-        -- Tab button
         local tabBtn = Instance.new("TextButton")
         tabBtn.Name = "tabButton"
         tabBtn.Parent = tabPanel
@@ -587,7 +571,6 @@ function Library:CreateWindow(titleText, toggleKey)
         tabBtn.TextSize = 15
         tabBtn.RichText = true
 
-        -- Page (scrolling frame)
         local page = Instance.new("ScrollingFrame")
         page.Name = "page"
         page.Parent = content
@@ -642,10 +625,6 @@ function Library:CreateWindow(titleText, toggleKey)
         page.ChildRemoved:Connect(refreshSize)
 
         Tabs.isFirst = false
-
-        -- ======================================================
-        -- COMPONENT FACTORY
-        -- ======================================================
 
         local Components = {}
 
@@ -894,7 +873,6 @@ function Library:CreateWindow(titleText, toggleKey)
             btnLayout.SortOrder = Enum.SortOrder.LayoutOrder
             btnLayout.VerticalAlignment = Enum.VerticalAlignment.Center
 
-            -- Checkbox outer
             local cbEdge = Instance.new("Frame")
             cbEdge.Name = "toggleEdge"
             cbEdge.Parent = btn
@@ -902,7 +880,6 @@ function Library:CreateWindow(titleText, toggleKey)
             cbEdge.Size = UDim2.new(0, 18, 0, 18)
             Helper:CreateCorner(cbEdge, 2)
 
-            -- Checkbox inner
             local cb = Instance.new("Frame")
             cb.Name = "toggle"
             cb.Parent = cbEdge
@@ -922,7 +899,6 @@ function Library:CreateWindow(titleText, toggleKey)
             cbFill.Size = UDim2.new(0, 0, 0, 0)
             Helper:CreateCorner(cbFill, 2)
 
-            -- Label
             local lbl = Instance.new("TextLabel")
             lbl.Name = "toggleLabel"
             lbl.Parent = btn
@@ -938,7 +914,6 @@ function Library:CreateWindow(titleText, toggleKey)
             lbl.RichText = true
             Helper:Pad(lbl, 6, 0, 0, 0)
 
-            -- Extras container (for keybind)
             local extras = Instance.new("Folder")
             extras.Name = "Extras"
             extras.Parent = btn
@@ -993,7 +968,6 @@ function Library:CreateWindow(titleText, toggleKey)
                 SetFunction = function(f) callback = f or function() end end,
             }
 
-            -- Attach keybind helper
             toggleApi.AddKeybind = function(defaultKey)
                 defaultKey = defaultKey or Enum.KeyCode.P
 
@@ -1208,7 +1182,6 @@ function Library:CreateWindow(titleText, toggleKey)
             frame.ClipsDescendants = true
             frame.Size = UDim2.new(0, 396, isSmall and 24 or isMedium and 46 or 142)
 
-            -- Label
             local lbl = Instance.new("TextLabel")
             lbl.Name = "textboxLabel"
             lbl.Parent = frame
@@ -1222,7 +1195,6 @@ function Library:CreateWindow(titleText, toggleKey)
             lbl.RichText = true
             Helper:Pad(lbl, 2, 6, 6, 6)
 
-            -- Input container
             local inputHolder = Instance.new("Frame")
             inputHolder.Parent = frame
             inputHolder.BackgroundColor3 = THEME.BorderLight
@@ -1257,7 +1229,6 @@ function Library:CreateWindow(titleText, toggleKey)
             end
             Helper:Pad(textBox, isSmall and 6 or 4, 6, isSmall and 4 or 6, 6)
 
-            -- Format filter
             textBox:GetPropertyChangedSignal("Text"):Connect(function()
                 if format == "numbers" then
                     textBox.Text = textBox.Text:gsub("%D+", "")
@@ -1637,7 +1608,6 @@ function Library:CreateWindow(titleText, toggleKey)
         return Components
     end
 
-    -- Tab manager methods
     function Tabs:Destroy()
         screen:Destroy()
     end
