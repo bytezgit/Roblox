@@ -1,5 +1,7 @@
 # GlassUI
 
+![GlassUI preview](example.png)
+
 A clean, dark, glass-style UI library for Roblox. Sidebar tabs, smooth animations, and all the elements you'd normally need: buttons, toggles, sliders, dropdowns, multi dropdowns, textboxes, keybinds, color pickers, labels, paragraphs and notifications.
 
 This README walks through everything from "I just downloaded this" to "I know every function it has". Read it top to bottom once and you'll be set.
