@@ -1,3 +1,8 @@
+--[[
+	GlassUI - glassmorphism UI library
+	Usage: see example.lua
+]]
+
 local Library = {}
 local WindowClass = {}
 WindowClass.__index = WindowClass
@@ -26,61 +31,9 @@ local C = {
 }
 Library.Colors = C
 
-local INPUT_NAMES = {
-	[Enum.UserInputType.MouseButton1] = "Mouse1",
-	[Enum.UserInputType.MouseButton2] = "Mouse2",
-	[Enum.UserInputType.MouseButton3] = "Mouse3",
-	[Enum.UserInputType.MouseWheel] = "Wheel",
-}
-
-local function inputName(input)
-	if input.UserInputType == Enum.UserInputType.Keyboard then
-		return input.KeyCode.Name
-	end
-	return INPUT_NAMES[input.UserInputType] or input.UserInputType.Name
-end
-
-local function inputMatches(input, bind)
-	if not bind then
-		return false
-	end
-	if type(bind) == "EnumItem" then
-		if bind.EnumType == Enum.KeyCode then
-			return input.UserInputType == Enum.UserInputType.Keyboard and input.KeyCode == bind
-		elseif bind.EnumType == Enum.UserInputType then
-			return input.UserInputType == bind
-		end
-		return false
-	end
-	if type(bind) == "table" then
-		if bind.Type == "Key" then
-			return input.UserInputType == Enum.UserInputType.Keyboard and input.KeyCode == bind.Value
-		elseif bind.Type == "Mouse" then
-			return input.UserInputType == bind.Value
-		end
-	end
-	return false
-end
-
-local function bindLabel(bind)
-	if not bind then
-		return "None"
-	end
-	if type(bind) == "EnumItem" then
-		if bind.EnumType == Enum.KeyCode then
-			return bind.Name
-		end
-		return INPUT_NAMES[bind] or bind.Name
-	end
-	if type(bind) == "table" then
-		if bind.Type == "Key" then
-			return bind.Value.Name
-		elseif bind.Type == "Mouse" then
-			return INPUT_NAMES[bind.Value] or "Mouse"
-		end
-	end
-	return "None"
-end
+----------------------------------------------------------------------
+-- helpers
+----------------------------------------------------------------------
 
 local function new(class, props, children)
 	local inst = Instance.new(class)
@@ -206,6 +159,10 @@ local function isMove(input)
 	return input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch
 end
 
+----------------------------------------------------------------------
+-- window
+----------------------------------------------------------------------
+
 function Library:CreateWindow(opts)
 	if type(opts) == "string" then
 		opts = { Title = opts }
@@ -231,6 +188,7 @@ function Library:CreateWindow(opts)
 		return c
 	end
 
+	-- gui root
 	local gui = new("ScreenGui", {
 		Name = guiName,
 		ResetOnSpawn = false,
@@ -325,6 +283,7 @@ function Library:CreateWindow(opts)
 	}, { corner(22) })
 	new("UIGradient", { Transparency = NumberSequence.new(0.9, 1), Rotation = 90, Parent = sheen })
 
+	-- header
 	local header = new("Frame", {
 		Name = "Header",
 		BackgroundTransparency = 1,
@@ -376,7 +335,7 @@ function Library:CreateWindow(opts)
 		Parent = header,
 	})
 	local function refreshSub()
-		subLbl.Text = (subtitle ~= "" and (subtitle .. "  |  ") or "") .. bindLabel(toggleKey) .. " to toggle"
+		subLbl.Text = (subtitle ~= "" and (subtitle .. "  |  ") or "") .. toggleKey.Name .. " to toggle"
 	end
 	refreshSub()
 
@@ -440,6 +399,7 @@ function Library:CreateWindow(opts)
 	local minBtn = iconButton("min", 1, C.white)
 	local closeBtn = iconButton("close", 2, C.white)
 
+	-- body
 	local body = new("Frame", {
 		Name = "Body",
 		BackgroundTransparency = 1,
@@ -488,6 +448,7 @@ function Library:CreateWindow(opts)
 	Window._pages = pagesHolder
 	Window.Active = nil
 
+	-- toast holder
 	local toasts = new("Frame", {
 		Name = "Toasts",
 		AnchorPoint = Vector2.new(1, 1),
@@ -505,6 +466,7 @@ function Library:CreateWindow(opts)
 	})
 	Window._toasts = toasts
 
+	-- show / hide / minimize
 	local shown, minimized = true, false
 
 	function Window:SetVisible(v)
@@ -592,6 +554,7 @@ function Library:CreateWindow(opts)
 		Window:Destroy()
 	end)
 
+	-- dragging
 	local dragging, dragStart, startPos
 	header.InputBegan:Connect(function(input)
 		if isPress(input) then
@@ -614,7 +577,7 @@ function Library:CreateWindow(opts)
 		end
 	end))
 	Window:_connect(UserInputService.InputBegan:Connect(function(input, gpe)
-		if not gpe and not Window._listening and inputMatches(input, toggleKey) then
+		if not gpe and not Window._listening and input.KeyCode == toggleKey then
 			Window:Toggle()
 		end
 	end))
@@ -627,6 +590,7 @@ function Library:CreateWindow(opts)
 		end))
 	end
 
+	-- custom drag helper (sliders / color bars)
 	function Window:_drag(hit, onMove)
 		local active = false
 		hit.InputBegan:Connect(function(input)
@@ -650,6 +614,10 @@ function Library:CreateWindow(opts)
 	Window:SetVisible(true)
 	return Window
 end
+
+----------------------------------------------------------------------
+-- notifications
+----------------------------------------------------------------------
 
 function WindowClass:Notify(title, text, duration, color)
 	if type(title) == "table" then
@@ -717,6 +685,10 @@ function WindowClass:Notify(title, text, duration, color)
 		end
 	end)
 end
+
+----------------------------------------------------------------------
+-- tabs
+----------------------------------------------------------------------
 
 function WindowClass:_styleTabs()
 	for _, t in ipairs(self.Tabs) do
@@ -821,6 +793,10 @@ function WindowClass:CreateTab(name, color)
 	return tab
 end
 
+----------------------------------------------------------------------
+-- element plumbing
+----------------------------------------------------------------------
+
 local function baseRow(tab, height)
 	tab._order += 1
 	local wrapper = new("Frame", {
@@ -886,6 +862,10 @@ local function decorate(obj, wrapper, nameLbl)
 	end
 	return obj
 end
+
+----------------------------------------------------------------------
+-- elements
+----------------------------------------------------------------------
 
 function TabClass:CreateSection(name)
 	self._order += 1
@@ -1221,11 +1201,11 @@ function TabClass:CreateKeybind(name, default, callback, changed)
 	local obj = { Value = nil }
 	local listening = false
 
-	function obj:Set(bind, silent)
-		self.Value = bind
-		pill.Text = bindLabel(bind)
+	function obj:Set(key, silent)
+		self.Value = key
+		pill.Text = key and key.Name or "None"
 		if not silent then
-			fire(changed, bind)
+			fire(changed, key)
 		end
 	end
 	function obj:Get()
@@ -1249,27 +1229,16 @@ function TabClass:CreateKeybind(name, default, callback, changed)
 				end)
 				tween(pill, ti(0.2), { BackgroundColor3 = C.white })
 				if input.KeyCode == Enum.KeyCode.Escape then
-					pill.Text = obj.Value and bindLabel(obj.Value) or "None"
+					pill.Text = obj.Value and obj.Value.Name or "None"
 				elseif input.KeyCode == Enum.KeyCode.Backspace then
 					obj:Set(nil)
 				else
 					obj:Set(input.KeyCode)
 				end
-			elseif input.UserInputType == Enum.UserInputType.MouseButton1
-				or input.UserInputType == Enum.UserInputType.MouseButton2
-				or input.UserInputType == Enum.UserInputType.MouseButton3
-				or input.UserInputType == Enum.UserInputType.MouseWheel then
-				listening = false
-				local win = self.Window
-				task.delay(0.2, function()
-					win._listening = false
-				end)
-				tween(pill, ti(0.2), { BackgroundColor3 = C.white })
-				obj:Set(input.UserInputType)
 			end
 			return
 		end
-		if not gpe and inputMatches(input, obj.Value) then
+		if not gpe and obj.Value and input.KeyCode == obj.Value then
 			fire(callback, obj.Value)
 		end
 	end))
@@ -1279,6 +1248,7 @@ function TabClass:CreateKeybind(name, default, callback, changed)
 end
 
 local function buildDropdown(tab, name, options, default, callback, multi)
+	local accent = tab.Color
 	local wrapper, card = baseRow(tab, ROW_H)
 	local nameLbl = nameLabel(card, name, -200)
 	local valueLbl = label({
